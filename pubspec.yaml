@@ -1,5 +1,5 @@
 name: news_byte
-description: "A new Flutter project."
+description: "Spaceflight news reader powered by Spaceflight News API"
 publish_to: "none"
 
 version: 1.0.0+1
