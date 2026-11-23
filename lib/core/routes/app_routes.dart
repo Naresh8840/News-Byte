@@ -6,9 +6,6 @@ import 'package:news_byte/features/news/news_list/view/screens/news_list_screen.
 import 'package:news_byte/features/news/news_list/view_model/news_list_cubit.dart';
 import 'package:news_byte/features/splash/splash_screen.dart';
 
-import 'news_detail_args.dart';
-
-
 
 final RouteObserver<PageRoute<dynamic>> appRouteObserver =
     RouteObserver<PageRoute<dynamic>>();

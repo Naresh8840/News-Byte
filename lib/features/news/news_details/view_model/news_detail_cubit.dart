@@ -57,3 +57,13 @@ class NewsDetailCubit extends Cubit<NewsDetailState> {
     Share.share('$title\n$url');
   }
 }
+
+class NewsDetailArgs {
+  final List<Article> articles;
+  final int initialIndex;
+
+  const NewsDetailArgs({
+    required this.articles,
+    required this.initialIndex,
+  });
+}

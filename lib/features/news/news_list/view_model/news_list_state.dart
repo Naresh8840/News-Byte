@@ -22,7 +22,9 @@ class NewsListLoaded extends NewsListState {
   final bool hasReachedMax;
   final String searchQuery;
   final String? selectedNewsSite;
+  final List<String> newsSites;
   final bool isPaginating;
+  final bool isFilterLoading;
   final bool paginationError;
   final int offset;
 
@@ -31,30 +33,21 @@ class NewsListLoaded extends NewsListState {
     this.hasReachedMax = false,
     this.searchQuery = '',
     this.selectedNewsSite,
+    this.newsSites = const [],
     this.isPaginating = false,
+    this.isFilterLoading = false,
     this.paginationError = false,
     this.offset = 0,
   });
-
-  List<String> get newsSites {
-    final sites = articles.map((a) => a.newsSite).toSet().toList();
-    sites.sort();
-    return sites;
-  }
-
-  List<Article> get filteredArticles {
-    if (selectedNewsSite == null || selectedNewsSite!.isEmpty) {
-      return articles;
-    }
-    return articles.where((a) => a.newsSite == selectedNewsSite).toList();
-  }
 
   NewsListLoaded copyWith({
     List<Article>? articles,
     bool? hasReachedMax,
     String? searchQuery,
     String? selectedNewsSite,
+    List<String>? newsSites,
     bool? isPaginating,
+    bool? isFilterLoading,
     bool? paginationError,
     int? offset,
     bool clearNewsSite = false,
@@ -65,7 +58,9 @@ class NewsListLoaded extends NewsListState {
       searchQuery: searchQuery ?? this.searchQuery,
       selectedNewsSite:
           clearNewsSite ? null : (selectedNewsSite ?? this.selectedNewsSite),
+      newsSites: newsSites ?? this.newsSites,
       isPaginating: isPaginating ?? this.isPaginating,
+      isFilterLoading: isFilterLoading ?? this.isFilterLoading,
       paginationError: paginationError ?? this.paginationError,
       offset: offset ?? this.offset,
     );
@@ -77,7 +72,9 @@ class NewsListLoaded extends NewsListState {
         hasReachedMax,
         searchQuery,
         selectedNewsSite,
+        newsSites,
         isPaginating,
+        isFilterLoading,
         paginationError,
         offset,
       ];

@@ -8,10 +8,18 @@ class NewsRepository {
   Future<ArticlesResponse> getArticles({
     int offset = 0,
     int limit = AppConstants.pageSize,
+    String? newsSite,
+    CancelToken? cancelToken,
   }) async {
     final response = await dio.get(
       HttpUrls.articles,
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: {
+        'limit': limit,
+        'offset': offset,
+        'news_site': ?newsSite,
+      },
+      
+      cancelToken: cancelToken,
     );
     return ArticlesResponse.fromJson(response.data);
   }
@@ -20,6 +28,7 @@ class NewsRepository {
     required String query,
     int offset = 0,
     int limit = AppConstants.pageSize,
+    String? newsSite,
     CancelToken? cancelToken,
   }) async {
     final response = await dio.get(
@@ -28,6 +37,7 @@ class NewsRepository {
         'title_contains': query,
         'limit': limit,
         'offset': offset,
+        'news_site': ?newsSite,
       },
       cancelToken: cancelToken,
     );

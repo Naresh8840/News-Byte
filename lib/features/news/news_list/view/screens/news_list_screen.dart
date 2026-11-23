@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:news_byte/features/news/news_details/view_model/news_detail_cubit.dart';
 import '../../../../../core/routes/app_routes.dart';
-import '../../../../../core/routes/news_detail_args.dart';
 import '../../../../../core/utils/string_resource.dart';
 import '../../../../../core/widgets/custom_text.dart';
 import '../../../../../core/widgets/empty_view.dart';
@@ -44,10 +43,16 @@ class _NewsListScreenState extends State<NewsListScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: isDark
-          ? SystemUiOverlayStyle.light
-              .copyWith(statusBarColor: Colors.transparent)
-          : SystemUiOverlayStyle.dark
-              .copyWith(statusBarColor: Colors.transparent),
+          ? SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor:
+                  Theme.of(context).scaffoldBackgroundColor,
+            )
+          : SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor:
+                  Theme.of(context).scaffoldBackgroundColor,
+            ),
       child: Scaffold(
         body: SafeArea(
           child: Column(
@@ -97,7 +102,10 @@ class _NewsListScreenState extends State<NewsListScreen> {
                     }
       
                     if (state is NewsListLoaded) {
-                      final articles = state.filteredArticles;
+                      if (state.isFilterLoading) {
+                        return const ShimmerListLoader();
+                      }
+                      final articles = state.articles;
                       if (articles.isEmpty) {
                         return EmptyView(
                           message: state.searchQuery.isNotEmpty

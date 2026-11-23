@@ -24,6 +24,25 @@ Article _testArticle({int id = 1, String newsSite = 'SpaceNews'}) {
   );
 }
 
+void _stubGetArticles(MockNewsRepository repo, ArticlesResponse response) {
+  when(() => repo.getArticles(
+        offset: any(named: 'offset'),
+        limit: any(named: 'limit'),
+        newsSite: any(named: 'newsSite'),
+        cancelToken: any(named: 'cancelToken'),
+      )).thenAnswer((_) async => response);
+}
+
+void _stubSearchArticles(MockNewsRepository repo, ArticlesResponse response) {
+  when(() => repo.searchArticles(
+        query: any(named: 'query'),
+        offset: any(named: 'offset'),
+        limit: any(named: 'limit'),
+        newsSite: any(named: 'newsSite'),
+        cancelToken: any(named: 'cancelToken'),
+      )).thenAnswer((_) async => response);
+}
+
 void main() {
   late MockNewsRepository mockRepository;
 
@@ -43,10 +62,7 @@ void main() {
       blocTest<NewsListCubit, NewsListState>(
         'emits [loading, loaded] on success',
         build: () {
-          when(() => mockRepository.getArticles(
-                offset: any(named: 'offset'),
-                limit: any(named: 'limit'),
-              )).thenAnswer((_) async => response);
+          _stubGetArticles(mockRepository, response);
           return NewsListCubit(repository: mockRepository);
         },
         act: (cubit) => cubit.loadArticles(),
@@ -55,7 +71,8 @@ void main() {
           isA<NewsListLoaded>()
               .having((s) => s.articles.length, 'articles count', 2)
               .having((s) => s.hasReachedMax, 'hasReachedMax', false)
-              .having((s) => s.offset, 'offset', 2),
+              .having((s) => s.offset, 'offset', 2)
+              .having((s) => s.newsSites, 'newsSites', ['SpaceNews']),
         ],
       );
 
@@ -65,6 +82,8 @@ void main() {
           when(() => mockRepository.getArticles(
                 offset: any(named: 'offset'),
                 limit: any(named: 'limit'),
+                newsSite: any(named: 'newsSite'),
+                cancelToken: any(named: 'cancelToken'),
               )).thenThrow(DioException(
             requestOptions: RequestOptions(),
             error: const ApiException('Server error'),
@@ -100,10 +119,7 @@ void main() {
       blocTest<NewsListCubit, NewsListState>(
         'appends new articles and deduplicates',
         build: () {
-          when(() => mockRepository.getArticles(
-                offset: any(named: 'offset'),
-                limit: any(named: 'limit'),
-              )).thenAnswer((_) async => moreResponse);
+          _stubGetArticles(mockRepository, moreResponse);
           return NewsListCubit(repository: mockRepository);
         },
         seed: () => NewsListLoaded(
@@ -153,10 +169,7 @@ void main() {
       blocTest<NewsListCubit, NewsListState>(
         'emits loaded with fresh data',
         build: () {
-          when(() => mockRepository.getArticles(
-                offset: any(named: 'offset'),
-                limit: any(named: 'limit'),
-              )).thenAnswer((_) async => refreshResponse);
+          _stubGetArticles(mockRepository, refreshResponse);
           return NewsListCubit(repository: mockRepository);
         },
         seed: () => NewsListLoaded(
@@ -182,12 +195,7 @@ void main() {
       blocTest<NewsListCubit, NewsListState>(
         'emits [loading, loaded] with search results',
         build: () {
-          when(() => mockRepository.searchArticles(
-                query: any(named: 'query'),
-                offset: any(named: 'offset'),
-                limit: any(named: 'limit'),
-                cancelToken: any(named: 'cancelToken'),
-              )).thenAnswer((_) async => searchResponse);
+          _stubSearchArticles(mockRepository, searchResponse);
           return NewsListCubit(repository: mockRepository);
         },
         act: (cubit) => cubit.search('nasa'),
@@ -202,12 +210,7 @@ void main() {
       blocTest<NewsListCubit, NewsListState>(
         'skips duplicate search query',
         build: () {
-          when(() => mockRepository.searchArticles(
-                query: any(named: 'query'),
-                offset: any(named: 'offset'),
-                limit: any(named: 'limit'),
-                cancelToken: any(named: 'cancelToken'),
-              )).thenAnswer((_) async => searchResponse);
+          _stubSearchArticles(mockRepository, searchResponse);
           return NewsListCubit(repository: mockRepository);
         },
         act: (cubit) async {
@@ -219,6 +222,7 @@ void main() {
                 query: any(named: 'query'),
                 offset: any(named: 'offset'),
                 limit: any(named: 'limit'),
+                newsSite: any(named: 'newsSite'),
                 cancelToken: any(named: 'cancelToken'),
               )).called(1);
         },
@@ -231,40 +235,86 @@ void main() {
 
     group('filterByNewsSite', () {
       blocTest<NewsListCubit, NewsListState>(
-        'updates selectedNewsSite on loaded state',
-        build: () => NewsListCubit(repository: mockRepository),
+        'makes API call with news_site filter',
+        build: () {
+          _stubGetArticles(
+            mockRepository,
+            ArticlesResponse(
+              count: 50,
+              next: 'https://api.example.com?offset=10',
+              results: [
+                _testArticle(id: 10, newsSite: 'NASA'),
+                _testArticle(id: 11, newsSite: 'NASA'),
+              ],
+            ),
+          );
+          return NewsListCubit(repository: mockRepository);
+        },
         seed: () => NewsListLoaded(
           articles: [
             _testArticle(id: 1, newsSite: 'SpaceNews'),
             _testArticle(id: 2, newsSite: 'NASA'),
           ],
+          newsSites: ['NASA', 'SpaceNews'],
           offset: 2,
         ),
         act: (cubit) => cubit.filterByNewsSite('NASA'),
         expect: () => [
           isA<NewsListLoaded>()
               .having((s) => s.selectedNewsSite, 'selectedNewsSite', 'NASA')
-              .having((s) => s.filteredArticles.length, 'filtered count', 1),
+              .having((s) => s.isFilterLoading, 'isFilterLoading', true),
+          isA<NewsListLoaded>()
+              .having((s) => s.selectedNewsSite, 'selectedNewsSite', 'NASA')
+              .having((s) => s.articles.length, 'articles count', 2)
+              .having((s) => s.isFilterLoading, 'isFilterLoading', false)
+              .having(
+                  (s) => s.newsSites, 'preserved sites', ['NASA', 'SpaceNews']),
         ],
       );
 
       blocTest<NewsListCubit, NewsListState>(
-        'clears filter when null passed',
-        build: () => NewsListCubit(repository: mockRepository),
+        'clears filter with fresh API call when null passed',
+        build: () {
+          _stubGetArticles(
+            mockRepository,
+            ArticlesResponse(
+              count: 20,
+              next: 'https://api.example.com?offset=10',
+              results: [
+                _testArticle(id: 1, newsSite: 'SpaceNews'),
+                _testArticle(id: 2, newsSite: 'NASA'),
+              ],
+            ),
+          );
+          return NewsListCubit(repository: mockRepository);
+        },
         seed: () => NewsListLoaded(
-          articles: [
-            _testArticle(id: 1, newsSite: 'SpaceNews'),
-            _testArticle(id: 2, newsSite: 'NASA'),
-          ],
+          articles: [_testArticle(id: 10, newsSite: 'NASA')],
           selectedNewsSite: 'NASA',
-          offset: 2,
+          newsSites: ['NASA', 'SpaceNews'],
+          offset: 1,
         ),
         act: (cubit) => cubit.filterByNewsSite(null),
         expect: () => [
           isA<NewsListLoaded>()
               .having((s) => s.selectedNewsSite, 'selectedNewsSite', null)
-              .having((s) => s.filteredArticles.length, 'filtered count', 2),
+              .having((s) => s.isFilterLoading, 'isFilterLoading', true),
+          isA<NewsListLoaded>()
+              .having((s) => s.selectedNewsSite, 'selectedNewsSite', null)
+              .having((s) => s.articles.length, 'articles count', 2)
+              .having((s) => s.isFilterLoading, 'isFilterLoading', false),
         ],
+      );
+
+      blocTest<NewsListCubit, NewsListState>(
+        'does nothing if same site selected',
+        build: () => NewsListCubit(repository: mockRepository),
+        seed: () => const NewsListLoaded(
+          articles: [],
+          selectedNewsSite: 'NASA',
+        ),
+        act: (cubit) => cubit.filterByNewsSite('NASA'),
+        expect: () => <NewsListState>[],
       );
 
       blocTest<NewsListCubit, NewsListState>(
